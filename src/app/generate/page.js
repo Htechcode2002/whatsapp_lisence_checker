@@ -124,7 +124,7 @@ export default function GeneratePage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-gray-600">
             <div>
-              <strong>1. 生成密钥：</strong>点击"生成许可证"按钮创建新密钥
+              <strong>1. 生成密钥：</strong>点击&ldquo;生成许可证&rdquo;按钮创建新密钥
             </div>
             <div>
               <strong>2. 发送给客户：</strong>将生成的密钥发送给您的客户
