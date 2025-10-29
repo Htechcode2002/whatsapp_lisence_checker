@@ -2,28 +2,48 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { isLoggedIn, removeToken, authFetch } from '@/lib/authClient';
 
 export default function Home() {
+  const router = useRouter();
   const [licenses, setLicenses] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // 检查登录状态
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      router.push('/login');
+    }
+  }, [router]);
 
   // 加载许可证列表
   const loadLicenses = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/licenses');
+      const response = await authFetch('/api/licenses');
       const result = await response.json();
       if (result.success) {
         setLicenses(result.data);
+      } else if (response.status === 401 || response.status === 403) {
+        // Token 无效，跳转到登录页
+        removeToken();
+        router.push('/login');
       }
     } catch (error) {
       console.error('加载失败:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // 登出功能
+  const handleLogout = () => {
+    removeToken();
+    router.push('/login');
   };
 
   useEffect(() => {
@@ -45,9 +65,14 @@ export default function Home() {
             <h1 className="text-3xl font-bold text-gray-900">许可证管理系统</h1>
             <p className="text-gray-600 mt-2">管理和生成应用许可证密钥</p>
           </div>
-          <Link href="/generate">
-            <Button size="lg">生成新许可证</Button>
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/generate">
+              <Button size="lg">生成新许可证</Button>
+            </Link>
+            <Button size="lg" variant="outline" onClick={handleLogout}>
+              登出
+            </Button>
+          </div>
         </div>
 
         {/* 统计卡片 */}

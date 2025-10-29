@@ -1,6 +1,7 @@
 import pool from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { customAlphabet } from 'nanoid';
+import { verifyAdminAuth } from '@/lib/auth';
 
 // 使用 nanoid 生成高质量随机密钥（碰撞概率极低，无需预先检查）
 const nanoid = customAlphabet('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', 16);
@@ -12,7 +13,11 @@ function generateLicenseKey() {
 }
 
 // 获取所有许可证
-export async function GET() {
+export async function GET(request) {
+  // 验证管理员权限
+  const authError = verifyAdminAuth(request);
+  if (authError) return authError;
+  
   try {
     const [rows] = await pool.query(`
       SELECT 
@@ -40,6 +45,10 @@ export async function GET() {
 
 // 创建新许可证
 export async function POST(request) {
+  // 验证管理员权限
+  const authError = verifyAdminAuth(request);
+  if (authError) return authError;
+  
   try {
     const { days = 365 } = await request.json();
     

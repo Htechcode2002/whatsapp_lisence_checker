@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { isLoggedIn, removeToken, authFetch } from '@/lib/authClient';
 
 export default function GeneratePage() {
   const router = useRouter();
@@ -14,12 +15,19 @@ export default function GeneratePage() {
   const [generating, setGenerating] = useState(false);
   const [generatedKey, setGeneratedKey] = useState('');
 
+  // 检查登录状态
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      router.push('/login');
+    }
+  }, [router]);
+
   const handleGenerate = async () => {
     try {
       setGenerating(true);
       setGeneratedKey('');
       
-      const response = await fetch('/api/licenses', {
+      const response = await authFetch('/api/licenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ days: parseInt(days) })
@@ -29,6 +37,11 @@ export default function GeneratePage() {
       
       if (result.success) {
         setGeneratedKey(result.data.license_key);
+      } else if (response.status === 401 || response.status === 403) {
+        // Token 无效，跳转到登录页
+        alert('登录已过期，请重新登录');
+        removeToken();
+        router.push('/login');
       } else {
         alert('生成失败: ' + result.error);
       }
