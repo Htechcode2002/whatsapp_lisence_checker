@@ -69,6 +69,9 @@ export default function Home() {
             <Link href="/generate">
               <Button size="lg">生成新许可证</Button>
             </Link>
+            <Link href="/announcements">
+              <Button size="lg" variant="ghost">公告管理</Button>
+            </Link>
             <Button size="lg" variant="outline" onClick={handleLogout}>
               登出
             </Button>
