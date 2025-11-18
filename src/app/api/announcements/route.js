@@ -6,7 +6,7 @@ import { verifyAdminAuth } from '@/lib/auth';
 export async function GET(request) {
   try {
     const [rows] = await pool.query(
-      `SELECT id, content, published_at, url FROM announcements ORDER BY published_at DESC`
+      `SELECT id, content, flag, published_at, url FROM announcements ORDER BY published_at DESC`
     );
     return NextResponse.json({ success: true, data: rows });
   } catch (error) {
