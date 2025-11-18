@@ -22,24 +22,27 @@ export async function POST(request) {
 
   try {
     const body = await request.json();
-    const { id, content, published_at, url } = body;
+    const { id, content, published_at, url, flag } = body;
 
     if (!content) {
       return NextResponse.json({ success: false, error: '缺少 content 字段' }, { status: 400 });
     }
 
+    // 规范化 flag 为 0 或 1
+    const numericFlag = flag === 1 || flag === '1' ? 1 : 0;
+
     if (id) {
       // 更新已有公告
       await pool.query(
-        'UPDATE announcements SET content = ?, published_at = ?, url = ? WHERE id = ?',
-        [content, published_at || new Date(), url || null, id]
+        'UPDATE announcements SET content = ?, published_at = ?, url = ?, flag = ? WHERE id = ?',
+        [content, published_at || new Date(), url || null, numericFlag, id]
       );
       return NextResponse.json({ success: true, message: '更新成功' });
     } else {
       // 新建公告
       await pool.query(
-        'INSERT INTO announcements (content, published_at, url) VALUES (?, ?, ?)',
-        [content, published_at || new Date(), url || null]
+        'INSERT INTO announcements (content, published_at, url, flag) VALUES (?, ?, ?, ?)',
+        [content, published_at || new Date(), url || null, numericFlag]
       );
       return NextResponse.json({ success: true, message: '创建成功' });
     }

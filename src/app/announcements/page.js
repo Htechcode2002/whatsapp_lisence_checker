@@ -24,6 +24,7 @@ export default function AnnouncementsPage() {
   const [id, setId] = useState(null);
   const [content, setContent] = useState("");
   const [url, setUrl] = useState("");
+  const [flag, setFlag] = useState(0);
   // admin token will be used from local storage via authFetch
 
   async function fetchList() {
@@ -51,12 +52,14 @@ export default function AnnouncementsPage() {
     setId(null);
     setContent("");
     setUrl("");
+    setFlag(0);
   }
 
   function loadToForm(item) {
     setId(item.id);
     setContent(item.content || "");
     setUrl(item.url || "");
+    setFlag(item.flag === 1 || item.flag === '1' ? 1 : 0);
   }
 
   async function handleSave(e) {
@@ -67,6 +70,7 @@ export default function AnnouncementsPage() {
       id,
       content,
       url,
+      flag,
     };
 
     try {
@@ -115,6 +119,18 @@ export default function AnnouncementsPage() {
                   <Input value={url} onChange={(e) => setUrl(e.target.value)} type="text" />
                 </div>
 
+                <div>
+                  <Label>标记 (0/1)</Label>
+                  <select
+                    value={flag}
+                    onChange={(e) => setFlag(parseInt(e.target.value || '0', 10))}
+                    className="file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm"
+                  >
+                    <option value={0}>0</option>
+                    <option value={1}>1</option>
+                  </select>
+                </div>
+
                 <div className="flex gap-2">
                   <Button type="submit">{id ? "更新" : "创建"}</Button>
                   <Button variant="outline" type="button" onClick={resetForm}>
@@ -139,6 +155,7 @@ export default function AnnouncementsPage() {
               <TableHeader>
                 <tr>
                   <TableHead>内容</TableHead>
+                  <TableHead>标记</TableHead>
                   <TableHead>日期</TableHead>
                   <TableHead>URL</TableHead>
                   <TableHead>操作</TableHead>
@@ -165,8 +182,9 @@ export default function AnnouncementsPage() {
                   ))
                 ) : (
                   announcements.map((a) => (
-                  <TableRow key={a.id}>
+                    <TableRow key={a.id}>
                       <TableCell className="whitespace-normal break-words max-w-full">{a.content}</TableCell>
+                      <TableCell className="text-center font-mono">{a.flag ?? 0}</TableCell>
                       <TableCell>{a.published_at ? new Date(a.published_at).toLocaleString() : "-"}</TableCell>
                       <TableCell>
                         {a.url ? (
