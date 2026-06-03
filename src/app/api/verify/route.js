@@ -1,12 +1,13 @@
 import pool from '@/lib/db';
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 
 // 验证许可证（桌面应用每次启动时调用）
 export async function POST(request) {
   try {
-    const { license_key, hardware_fingerprint } = await request.json();
+    const { license_key, hardware_fingerprint, client_id } = await request.json();
     
-    if (!license_key || !hardware_fingerprint) {
+    if (!license_key || !hardware_fingerprint || !client_id) {
       return NextResponse.json({ 
         success: false, 
         error: '缺少必要参数' 
@@ -36,12 +37,37 @@ export async function POST(request) {
       }, { status: 403 });
     }
     
-    // 检查硬件指纹是否匹配
+    // 检查硬件指纹和微信号是否匹配
     if (license.hardware_fingerprint !== hardware_fingerprint) {
       return NextResponse.json({ 
         success: false, 
         error: '硬件指纹不匹配' 
       }, { status: 403 });
+    }
+
+    if (license.client_id !== client_id) {
+      return NextResponse.json({
+        success: false,
+        error: '微信账号不匹配'
+      }, { status: 403 });
+    }
+    
+    // Generate signature
+    const privateKey = process.env.LICENSE_PRIVATE_KEY
+      ? process.env.LICENSE_PRIVATE_KEY.replace(/\\n/g, '\n')
+      : '';
+    
+    let signature = '';
+    if (privateKey) {
+      try {
+        const formattedDate = new Date(license.expires_at).toISOString();
+        const signData = `${license.license_key}|${formattedDate}|${hardware_fingerprint}|${client_id}`;
+        signature = crypto.sign("sha256", Buffer.from(signData), privateKey).toString('base64');
+      } catch (signErr) {
+        console.error('Error generating signature:', signErr);
+      }
+    } else {
+      console.error('LICENSE_PRIVATE_KEY is missing on server!');
     }
     
     return NextResponse.json({ 
@@ -49,7 +75,9 @@ export async function POST(request) {
       message: '验证通过',
       data: {
         license_key: license.license_key,
-        expires_at: license.expires_at
+        expires_at: license.expires_at,
+        client_id: client_id,
+        signature: signature
       }
     });
   } catch (error) {

@@ -135,7 +135,7 @@ export default function GeneratePage() {
                   ))}
                 </div>
                 
-                <p className="text-xs flex items-center gap-1.5 text-gray-400 mt-1">
+                 <p className="text-xs flex items-center gap-1.5 text-gray-400 mt-1">
                   <Info className="w-3 h-3" />
                   生成后，计费将在客户首次激活时正式开始。
                 </p>

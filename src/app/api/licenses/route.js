@@ -26,6 +26,8 @@ export async function GET(request) {
         valid_days,
         expires_at,
         hardware_fingerprint,
+        client_id,
+        max_accounts,
         CASE 
           WHEN hardware_fingerprint IS NOT NULL THEN '已激活'
           ELSE '未激活'
@@ -50,33 +52,54 @@ export async function POST(request) {
   if (authError) return authError;
   
   try {
-    const { days = 365 } = await request.json();
+    const { days = 365, max_accounts = 2, quantity = 1 } = await request.json();
     
-    // 使用 nanoid 直接生成密钥（无需预先检查数据库）
-    const licenseKey = generateLicenseKey();
+    const parsedDays = parseInt(days);
+    const parsedMaxAccounts = parseInt(max_accounts);
+    const parsedQuantity = Math.max(1, Math.min(100, parseInt(quantity) || 1)); // 限制单次最多100个
     
-    // 直接插入数据库（只存储有效天数，过期时间在激活时计算）
-    await pool.query(
-      'INSERT INTO licenses (license_key, valid_days) VALUES (?, ?)',
-      [licenseKey, parseInt(days)]
-    );
+    const generatedKeys = [];
+    
+    for (let i = 0; i < parsedQuantity; i++) {
+      let inserted = false;
+      let retries = 0;
+      
+      while (!inserted && retries < 3) {
+        try {
+          const licenseKey = generateLicenseKey();
+          await pool.query(
+            'INSERT INTO licenses (license_key, valid_days, max_accounts) VALUES (?, ?, ?)',
+            [licenseKey, parsedDays, parsedMaxAccounts]
+          );
+          generatedKeys.push({
+            license_key: licenseKey,
+            valid_days: parsedDays,
+            max_accounts: parsedMaxAccounts
+          });
+          inserted = true;
+        } catch (error) {
+          if (error.code === 'ER_DUP_ENTRY') {
+            console.log('密钥重复，重新生成...');
+            retries++;
+          } else {
+            throw error;
+          }
+        }
+      }
+      
+      if (!inserted) {
+        throw new Error('生成密钥冲突次数过多');
+      }
+    }
     
     return NextResponse.json({ 
       success: true, 
-      data: { 
-        license_key: licenseKey,
-        valid_days: parseInt(days)
-      } 
+      data: generatedKeys,
+      message: `成功生成 ${parsedQuantity} 个许可证`
     });
   } catch (error) {
-    // 如果极小概率遇到重复密钥（数据库 UNIQUE 约束报错），递归重试
-    if (error.code === 'ER_DUP_ENTRY') {
-      console.log('密钥重复，重新生成...');
-      return POST(request);
-    }
-    
     console.error('创建许可证错误:', error);
-    return NextResponse.json({ success: false, error: '创建失败' }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || '创建失败' }, { status: 500 });
   }
 }
 

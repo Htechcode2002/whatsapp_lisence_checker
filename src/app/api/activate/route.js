@@ -1,12 +1,13 @@
 import pool from '@/lib/db';
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 
 // 激活许可证（桌面应用调用）
 export async function POST(request) {
   try {
-    const { license_key, hardware_fingerprint } = await request.json();
+    const { license_key, hardware_fingerprint, client_id } = await request.json();
     
-    if (!license_key || !hardware_fingerprint) {
+    if (!license_key || !hardware_fingerprint || !client_id) {
       return NextResponse.json({ 
         success: false, 
         error: '缺少必要参数' 
@@ -35,6 +36,13 @@ export async function POST(request) {
         error: '许可证已绑定其他设备' 
       }, { status: 403 });
     }
+
+    if (license.client_id && license.client_id !== client_id) {
+      return NextResponse.json({
+        success: false,
+        error: '许可证已绑定其他微信账号'
+      }, { status: 403 });
+    }
     
     // 检查是否过期（只有已激活的才检查）
     if (license.expires_at && new Date(license.expires_at) < new Date()) {
@@ -44,17 +52,36 @@ export async function POST(request) {
       }, { status: 403 });
     }
     
-    // 首次激活：绑定硬件指纹并计算过期时间
-    if (!license.hardware_fingerprint) {
+    // 首次激活：绑定硬件指纹和微信号，并计算过期时间
+    if (!license.hardware_fingerprint || !license.client_id) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + license.valid_days);
       
       await pool.query(
-        'UPDATE licenses SET hardware_fingerprint = ?, activated_at = NOW(), expires_at = ? WHERE id = ?',
-        [hardware_fingerprint, expiresAt, license.id]
+        'UPDATE licenses SET hardware_fingerprint = ?, client_id = ?, activated_at = NOW(), expires_at = ? WHERE id = ?',
+        [hardware_fingerprint, client_id, expiresAt, license.id]
       );
       
       license.expires_at = expiresAt;
+      license.client_id = client_id;
+    }
+    
+    // Generate signature
+    const privateKey = process.env.LICENSE_PRIVATE_KEY
+      ? process.env.LICENSE_PRIVATE_KEY.replace(/\\n/g, '\n')
+      : '';
+    
+    let signature = '';
+    if (privateKey) {
+      try {
+        const formattedDate = new Date(license.expires_at).toISOString();
+        const signData = `${license.license_key}|${formattedDate}|${hardware_fingerprint}|${client_id}`;
+        signature = crypto.sign("sha256", Buffer.from(signData), privateKey).toString('base64');
+      } catch (signErr) {
+        console.error('Error generating signature:', signErr);
+      }
+    } else {
+      console.error('LICENSE_PRIVATE_KEY is missing on server!');
     }
     
     return NextResponse.json({ 
@@ -62,7 +89,9 @@ export async function POST(request) {
       message: '激活成功',
       data: {
         license_key: license.license_key,
-        expires_at: license.expires_at
+        expires_at: license.expires_at,
+        client_id: client_id,
+        signature: signature
       }
     });
   } catch (error) {

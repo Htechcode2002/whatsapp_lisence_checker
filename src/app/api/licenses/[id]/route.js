@@ -11,7 +11,7 @@ export async function PATCH(request, { params }) {
   
   try {
     const body = await request.json();
-    const { valid_days, expires_at, hardware_fingerprint } = body;
+    const { valid_days, expires_at, hardware_fingerprint, max_accounts, client_id } = body;
     
     // 如果更新有效天数，且已经激活，则需要重新计算过期时间
     if (valid_days !== undefined) {
@@ -21,9 +21,17 @@ export async function PATCH(request, { params }) {
         const newExpiresAt = new Date(activatedAt);
         newExpiresAt.setDate(newExpiresAt.getDate() + parseInt(valid_days));
         
+        const updatesList = ['valid_days = ?', 'expires_at = ?'];
+        const valuesList = [parseInt(valid_days), newExpiresAt];
+        if (max_accounts !== undefined) {
+          updatesList.push('max_accounts = ?');
+          valuesList.push(parseInt(max_accounts));
+        }
+        valuesList.push(id);
+        
         await pool.query(
-          'UPDATE licenses SET valid_days = ?, expires_at = ? WHERE id = ?',
-          [parseInt(valid_days), newExpiresAt, id]
+          `UPDATE licenses SET ${updatesList.join(', ')} WHERE id = ?`,
+          valuesList
         );
         return NextResponse.json({ success: true, message: '更新成功并已同步过期时间' });
       }
@@ -37,6 +45,11 @@ export async function PATCH(request, { params }) {
       updates.push('valid_days = ?');
       values.push(parseInt(valid_days));
     }
+
+    if (max_accounts !== undefined) {
+      updates.push('max_accounts = ?');
+      values.push(parseInt(max_accounts));
+    }
     
     if (expires_at !== undefined) {
       updates.push('expires_at = ?');
@@ -47,11 +60,17 @@ export async function PATCH(request, { params }) {
       updates.push('hardware_fingerprint = ?');
       values.push(hardware_fingerprint === null ? null : hardware_fingerprint);
       
-      // 如果解绑硬件，通常也需要清空激活时间和过期时间（视业务而定）
+      // 如果解绑硬件，通常也需要清空激活时间、过期时间和绑定的微信号
       if (hardware_fingerprint === null) {
           updates.push('activated_at = NULL');
           updates.push('expires_at = NULL');
+          updates.push('client_id = NULL');
       }
+    }
+
+    if (client_id !== undefined) {
+      updates.push('client_id = ?');
+      values.push(client_id === null ? null : client_id);
     }
     
     if (updates.length === 0) {
