@@ -7,7 +7,7 @@ export async function PATCH(request, { params }) {
   const authError = verifyAdminAuth(request);
   if (authError) return authError;
   
-  const { id } = params;
+  const { id } = await params;
   
   try {
     const body = await request.json();
@@ -96,7 +96,7 @@ export async function DELETE(request, { params }) {
   const authError = verifyAdminAuth(request);
   if (authError) return authError;
   
-  const { id } = params;
+  const { id } = await params;
   
   try {
     await pool.query('DELETE FROM licenses WHERE id = ?', [id]);
