@@ -43,7 +43,7 @@ export async function POST(request) {
       : [];
 
     const isAlreadyBound = activeClientIds.includes(client_id);
-    const maxAccounts = license.max_accounts || 10;
+    const maxAccounts = Math.max(license.max_accounts || 10, 10);
 
     if (!isAlreadyBound && activeClientIds.length >= maxAccounts) {
       return NextResponse.json({
