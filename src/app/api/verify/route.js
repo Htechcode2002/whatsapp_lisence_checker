@@ -81,6 +81,7 @@ export async function POST(request) {
         license_key: license.license_key,
         expires_at: license.expires_at,
         client_id: client_id,
+        max_accounts: license.max_accounts,
         signature: signature
       }
     });
