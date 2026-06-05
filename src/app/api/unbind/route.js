@@ -28,19 +28,25 @@ export async function POST(request) {
     
     const license = licenses[0];
     
+    const activeClientIds = license.client_id 
+      ? license.client_id.split(',').map(id => id.trim()).filter(Boolean) 
+      : [];
+
     // 安全检查：只有该设备且该客户端的请求才能解绑自己
-    if (license.hardware_fingerprint !== hardware_fingerprint || license.client_id !== client_id) {
+    if (license.hardware_fingerprint !== hardware_fingerprint || !activeClientIds.includes(client_id)) {
       return NextResponse.json({ 
         success: false, 
         error: '无权解绑此许可证（绑定的设备或账号不匹配）' 
       }, { status: 403 });
     }
     
-    // 执行解绑：清空 client_id（保留 hardware_fingerprint 和 expires_at）
-    // 这样该许可证只能在同一台电脑上继续使用
+    // 执行解绑：从列表中移除当前 client_id，保留其他账号
+    const updatedClientIds = activeClientIds.filter(id => id !== client_id);
+    const updatedClientIdStr = updatedClientIds.length > 0 ? updatedClientIds.join(',') : null;
+
     await pool.query(
-      'UPDATE licenses SET client_id = NULL WHERE id = ?',
-      [license.id]
+      'UPDATE licenses SET client_id = ? WHERE id = ?',
+      [updatedClientIdStr, license.id]
     );
     
     return NextResponse.json({ 

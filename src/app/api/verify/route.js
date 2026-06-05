@@ -6,57 +6,61 @@ import crypto from 'crypto';
 export async function POST(request) {
   try {
     const { license_key, hardware_fingerprint, client_id } = await request.json();
-    
+
     if (!license_key || !hardware_fingerprint || !client_id) {
-      return NextResponse.json({ 
-        success: false, 
-        error: '缺少必要参数' 
+      return NextResponse.json({
+        success: false,
+        error: '缺少必要参数'
       }, { status: 400 });
     }
-    
+
     // 查询许可证
     const [licenses] = await pool.query(
       'SELECT * FROM licenses WHERE license_key = ?',
       [license_key]
     );
-    
+
     if (licenses.length === 0) {
-      return NextResponse.json({ 
-        success: false, 
-        error: '许可证不存在' 
+      return NextResponse.json({
+        success: false,
+        error: '许可证不存在'
       }, { status: 404 });
     }
-    
+
     const license = licenses[0];
-    
+
     // 检查是否过期
     if (new Date(license.expires_at) < new Date()) {
-      return NextResponse.json({ 
-        success: false, 
-        error: '许可证已过期' 
-      }, { status: 403 });
-    }
-    
-    // 检查硬件指纹和微信号是否匹配
-    if (license.hardware_fingerprint !== hardware_fingerprint) {
-      return NextResponse.json({ 
-        success: false, 
-        error: '硬件指纹不匹配' 
+      return NextResponse.json({
+        success: false,
+        error: '许可证已过期'
       }, { status: 403 });
     }
 
-    if (license.client_id !== client_id) {
+    // 检查硬件指纹和微信号是否匹配
+    if (license.hardware_fingerprint !== hardware_fingerprint) {
       return NextResponse.json({
         success: false,
-        error: '微信账号不匹配'
+        error: '硬件指纹不匹配'
       }, { status: 403 });
     }
-    
+
+    const activeClientIds = license.client_id
+      ? license.client_id.split(',').map(id => id.trim()).filter(Boolean)
+      : [];
+
+    if (!activeClientIds.includes(client_id)) {
+      return NextResponse.json({
+        success: false,
+        error: '账号不匹配'
+      }, { status: 403 });
+    }
+
     // Generate signature
     const privateKey = process.env.LICENSE_PRIVATE_KEY
       ? process.env.LICENSE_PRIVATE_KEY.replace(/\\n/g, '\n')
       : '';
-    
+
     let signature = '';
     if (privateKey) {
       try {
@@ -69,9 +73,9 @@ export async function POST(request) {
     } else {
       console.error('LICENSE_PRIVATE_KEY is missing on server!');
     }
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       message: '验证通过',
       data: {
         license_key: license.license_key,

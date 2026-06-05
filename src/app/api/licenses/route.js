@@ -52,7 +52,7 @@ export async function POST(request) {
   if (authError) return authError;
   
   try {
-    const { days = 365, max_accounts = 2, quantity = 1 } = await request.json();
+    const { days = 365, max_accounts = 10, quantity = 1 } = await request.json();
     
     const parsedDays = parseInt(days);
     const parsedMaxAccounts = parseInt(max_accounts);

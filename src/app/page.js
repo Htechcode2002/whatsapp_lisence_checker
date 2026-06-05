@@ -636,9 +636,13 @@ export default function Home() {
 
                           <TableCell className="py-4.5">
                             {license.client_id ? (
-                              <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50/80 border border-blue-100 px-2 py-1 rounded-md" title={license.client_id}>
-                                {license.client_id}
-                              </span>
+                              <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                {license.client_id.split(',').map((id) => (
+                                  <span key={id} className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50/80 border border-blue-100 px-1.5 py-0.5 rounded-md" title={id}>
+                                    {id}
+                                  </span>
+                                ))}
+                              </div>
                             ) : (
                               <span className="text-[10px] text-slate-350 italic">未绑定</span>
                             )}

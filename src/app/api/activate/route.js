@@ -37,10 +37,18 @@ export async function POST(request) {
       }, { status: 403 });
     }
 
-    if (license.client_id && license.client_id !== client_id) {
+    // 解析已绑定的账号 ID
+    const activeClientIds = license.client_id 
+      ? license.client_id.split(',').map(id => id.trim()).filter(Boolean) 
+      : [];
+
+    const isAlreadyBound = activeClientIds.includes(client_id);
+    const maxAccounts = license.max_accounts || 10;
+
+    if (!isAlreadyBound && activeClientIds.length >= maxAccounts) {
       return NextResponse.json({
         success: false,
-        error: '许可证已绑定其他微信账号'
+        error: `该许可证最多只能绑定 ${maxAccounts} 个 WhatsApp 账号，第 11 个需要使用另一个许可证`
       }, { status: 403 });
     }
     
@@ -52,18 +60,32 @@ export async function POST(request) {
       }, { status: 403 });
     }
     
-    // 首次激活：绑定硬件指纹和微信号，并计算过期时间
-    if (!license.hardware_fingerprint || !license.client_id) {
+    // 首次激活：绑定硬件指纹并计算过期时间
+    if (!license.hardware_fingerprint) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + license.valid_days);
       
+      const updatedClientIds = [client_id];
+      const updatedClientIdStr = updatedClientIds.join(',');
+      
       await pool.query(
         'UPDATE licenses SET hardware_fingerprint = ?, client_id = ?, activated_at = NOW(), expires_at = ? WHERE id = ?',
-        [hardware_fingerprint, client_id, expiresAt, license.id]
+        [hardware_fingerprint, updatedClientIdStr, expiresAt, license.id]
       );
       
       license.expires_at = expiresAt;
-      license.client_id = client_id;
+      license.client_id = updatedClientIdStr;
+    } else if (!isAlreadyBound) {
+      // 同一台设备绑定新账号
+      const updatedClientIds = [...activeClientIds, client_id];
+      const updatedClientIdStr = updatedClientIds.join(',');
+      
+      await pool.query(
+        'UPDATE licenses SET client_id = ? WHERE id = ?',
+        [updatedClientIdStr, license.id]
+      );
+      
+      license.client_id = updatedClientIdStr;
     }
     
     // Generate signature
