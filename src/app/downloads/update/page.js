@@ -75,7 +75,7 @@ export default function DownloadsPage() {
               <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 space-y-2.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-400 font-medium">Latest Version</span>
-                  <span className="font-mono font-bold text-emerald-400">v2.0.0</span>
+                  <span className="font-mono font-bold text-emerald-400">v0.0.1</span>
                 </div>
                 <div className="flex justify-between border-t border-slate-800/60 pt-2.5">
                   <span className="text-slate-400 font-medium">Release Date</span>
@@ -90,7 +90,7 @@ export default function DownloadsPage() {
 
             <div className="mt-8 space-y-4">
               <a 
-                href="/downloads/update/WhatsApp_Blaster_Pro_Setup.exe" 
+                href="https://github.com/Htechcode2002/whatsapp_lisence_checker/releases/download/v0.0.1/WhatsApp.Blaster.Pro.Setup.0.0.1.exe" 
                 download
                 onClick={handleDownloadClick}
                 className="block w-full"
