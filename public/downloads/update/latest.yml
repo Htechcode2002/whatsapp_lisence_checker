@@ -1,8 +1,8 @@
-version: 0.0.3
+version: 0.0.4
 files:
-  - url: https://github.com/Htechcode2002/whatsapp_lisence_checker/releases/download/v0.0.3/WhatsApp.Blaster.Pro.Setup.0.0.3.exe
-    sha512: rIt4CsdY1Kx4oFcGA9wkVAnH3I52ptLTwHmMarvwCu/d8D8b+lKP8k7MZG9c3G5vUehhqVlQgwtVSsCD9kyvkg==
-    size: 118954508
-path: WhatsApp Blaster Pro Setup 0.0.3.exe
-sha512: rIt4CsdY1Kx4oFcGA9wkVAnH3I52ptLTwHmMarvwCu/d8D8b+lKP8k7MZG9c3G5vUehhqVlQgwtVSsCD9kyvkg==
-releaseDate: '2026-06-15T16:16:45.750Z'
+  - url: https://github.com/Htechcode2002/whatsapp_lisence_checker/releases/download/v0.0.4/WhatsApp.Blaster.Pro.Setup.0.0.4.exe
+    sha512: gD9SdO3moYPUCYxEIbw2WrkBCAEY4p9hTrtbyzbv+g32wCndvkhNesSb1G+UbzNrEHxn0J6Wrw+OuqrdUEz2gg==
+    size: 118954454
+path: WhatsApp Blaster Pro Setup 0.0.4.exe
+sha512: gD9SdO3moYPUCYxEIbw2WrkBCAEY4p9hTrtbyzbv+g32wCndvkhNesSb1G+UbzNrEHxn0J6Wrw+OuqrdUEz2gg==
+releaseDate: '2026-06-15T16:48:06.057Z'
