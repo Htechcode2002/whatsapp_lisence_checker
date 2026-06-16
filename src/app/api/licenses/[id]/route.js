@@ -11,21 +11,33 @@ export async function PATCH(request, { params }) {
   
   try {
     const body = await request.json();
-    const { valid_days, expires_at, hardware_fingerprint, max_accounts, client_id } = body;
+    const { valid_days, expires_at, hardware_fingerprint, max_accounts, client_id, remark } = body;
     
     // 如果更新有效天数，且已经激活，则需要重新计算过期时间
     if (valid_days !== undefined) {
-      const [licenses] = await pool.query('SELECT activated_at FROM licenses WHERE id = ?', [id]);
+      const [licenses] = await pool.query('SELECT valid_days, activated_at, expires_at FROM licenses WHERE id = ?', [id]);
       if (licenses.length > 0 && licenses[0].activated_at) {
-        const activatedAt = new Date(licenses[0].activated_at);
-        const newExpiresAt = new Date(activatedAt);
-        newExpiresAt.setDate(newExpiresAt.getDate() + parseInt(valid_days));
+        const license = licenses[0];
+        const newValidDays = parseInt(valid_days);
+        const oldValidDays = license.valid_days || 0;
+        const addedDays = newValidDays - oldValidDays;
+        
+        // 如果已过期，以当前时间为基准；如果未过期，以旧过期时间为基准
+        const oldExpiresAt = license.expires_at ? new Date(license.expires_at) : new Date(license.activated_at);
+        const baseDate = oldExpiresAt > new Date() ? oldExpiresAt : new Date();
+        
+        const newExpiresAt = new Date(baseDate);
+        newExpiresAt.setDate(newExpiresAt.getDate() + addedDays);
         
         const updatesList = ['valid_days = ?', 'expires_at = ?'];
-        const valuesList = [parseInt(valid_days), newExpiresAt];
+        const valuesList = [newValidDays, newExpiresAt];
         if (max_accounts !== undefined) {
           updatesList.push('max_accounts = ?');
           valuesList.push(parseInt(max_accounts));
+        }
+        if (remark !== undefined) {
+          updatesList.push('remark = ?');
+          valuesList.push(remark === null ? null : remark);
         }
         valuesList.push(id);
         
@@ -60,10 +72,8 @@ export async function PATCH(request, { params }) {
       updates.push('hardware_fingerprint = ?');
       values.push(hardware_fingerprint === null ? null : hardware_fingerprint);
       
-      // 如果解绑硬件，通常也需要清空激活时间、过期时间和绑定的微信号
+      // 如果解绑硬件，只清空绑定的微信号，保留激活时间和过期时间，防止重新计算
       if (hardware_fingerprint === null) {
-          updates.push('activated_at = NULL');
-          updates.push('expires_at = NULL');
           updates.push('client_id = NULL');
       }
     }
@@ -71,6 +81,11 @@ export async function PATCH(request, { params }) {
     if (client_id !== undefined) {
       updates.push('client_id = ?');
       values.push(client_id === null ? null : client_id);
+    }
+
+    if (remark !== undefined) {
+      updates.push('remark = ?');
+      values.push(remark === null ? null : remark);
     }
     
     if (updates.length === 0) {

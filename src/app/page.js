@@ -38,6 +38,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editDays, setEditDays] = useState('');
+  const [editRemark, setEditRemark] = useState('');
+  const [genRemark, setGenRemark] = useState('');
   
   // Search, Filter & Sort state
   const [searchTerm, setSearchTerm] = useState('');
@@ -113,7 +115,8 @@ export default function Home() {
       const response = await authFetch(`/api/licenses/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ 
-          valid_days: parseInt(editDays)
+          valid_days: parseInt(editDays),
+          remark: editRemark || null
         }),
       });
       const result = await response.json();
@@ -145,6 +148,42 @@ export default function Home() {
       }
     } catch (error) {
       console.error('解绑错误:', error);
+    }
+  };
+
+  // Renew Single License
+  const handleRenew = async (id, currentValidDays) => {
+    const addDaysStr = window.prompt('请输入要增加或减少的天数：\n\n(输入正数增加天数，输入负数减少天数，例如：30 或 -30)');
+    if (!addDaysStr) return;
+    const addDays = parseInt(addDaysStr);
+    if (isNaN(addDays) || addDays === 0) {
+      alert('请输入有效的非零整数天数');
+      return;
+    }
+
+    if (currentValidDays + addDays < 1) {
+      alert(`天数扣减后总授权时长不能小于 1 天！\n(当前总时长：${currentValidDays}天，欲扣减：${Math.abs(addDays)}天)`);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await authFetch(`/api/licenses/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ 
+          valid_days: currentValidDays + addDays
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        loadLicenses();
+      } else {
+        alert(result.error || '更新失败');
+      }
+    } catch (error) {
+      console.error('更新错误:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -269,7 +308,11 @@ export default function Home() {
       const response = await authFetch('/api/licenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ days: parseInt(genDays), quantity: parseInt(genQuantity) })
+        body: JSON.stringify({ 
+          days: parseInt(genDays), 
+          quantity: parseInt(genQuantity),
+          remark: genRemark || null
+        })
       });
       
       const result = await response.json();
@@ -308,6 +351,7 @@ export default function Home() {
     const matchesSearch = 
       license.license_key.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (license.client_id && license.client_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (license.remark && license.remark.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (license.hardware_fingerprint && license.hardware_fingerprint.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const daysRemaining = calculateDaysRemaining(license.expires_at);
@@ -382,6 +426,7 @@ export default function Home() {
               onClick={() => {
                 setGenDays(365);
                 setGenQuantity(1);
+                setGenRemark('');
                 setNewlyGeneratedKeys([]);
                 setModalCopied(false);
                 setIsGenModalOpen(true);
@@ -558,6 +603,7 @@ export default function Home() {
                       </TableHead>
                       <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-wider py-4">设备指纹 (HWID)</TableHead>
                       <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-wider py-4">绑定账号 (CLIENT ID)</TableHead>
+                      <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-wider py-4">备注</TableHead>
                       <TableHead className="font-bold text-slate-500 text-[10px] uppercase tracking-wider py-4">状态</TableHead>
                       <TableHead 
                         className="font-bold text-slate-500 text-[10px] uppercase tracking-wider py-4 cursor-pointer hover:bg-slate-100/50 transition-colors"
@@ -649,6 +695,24 @@ export default function Home() {
                           </TableCell>
 
                           <TableCell className="py-4.5">
+                            {isEditing ? (
+                              <Input 
+                                type="text" 
+                                value={editRemark} 
+                                onChange={(e) => setEditRemark(e.target.value)}
+                                className="h-8 w-32 text-xs px-2 bg-white border-blue-200"
+                                placeholder="添加备注..."
+                              />
+                            ) : license.remark ? (
+                              <span className="text-xs font-semibold text-slate-700 max-w-[150px] truncate block" title={license.remark}>
+                                {license.remark}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-350 italic">无</span>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="py-4.5">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide shadow-xs border ${
                               isExpired 
                                 ? 'bg-rose-50 border-rose-200 text-rose-700' 
@@ -699,15 +763,26 @@ export default function Home() {
                               ) : (
                                 <>
                                   {isActivated && (
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-8.5 w-8.5 text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg cursor-pointer"
-                                      onClick={() => handleUnbind(license.id)}
-                                      title="解绑硬件及微信号"
-                                    >
-                                      <Unlink className="w-4.5 h-4.5" />
-                                    </Button>
+                                    <>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8.5 w-8.5 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer"
+                                        onClick={() => handleRenew(license.id, license.valid_days)}
+                                        title="续期许可证"
+                                      >
+                                        <Calendar className="w-4.5 h-4.5" />
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8.5 w-8.5 text-orange-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg cursor-pointer"
+                                        onClick={() => handleUnbind(license.id)}
+                                        title="解绑硬件及微信号"
+                                      >
+                                        <Unlink className="w-4.5 h-4.5" />
+                                      </Button>
+                                    </>
                                   )}
                                   <Button 
                                     variant="ghost" 
@@ -716,8 +791,9 @@ export default function Home() {
                                     onClick={() => {
                                       setEditingId(license.id);
                                       setEditDays(license.valid_days.toString());
+                                      setEditRemark(license.remark || '');
                                     }}
-                                    title="修改有效天数"
+                                    title="修改有效天数及备注"
                                   >
                                     <Pencil className="w-4.5 h-4.5" />
                                   </Button>
@@ -866,6 +942,20 @@ export default function Home() {
                         max="100"
                         required
                         placeholder="生成多少个密钥 (1-100)"
+                        className="pl-10 h-11 border-slate-200 outline-none rounded-xl focus:ring-2 focus:ring-blue-500/25 text-sm font-semibold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">备注 (可选)</label>
+                    <div className="relative">
+                      <Pencil className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        type="text"
+                        value={genRemark}
+                        onChange={(e) => setGenRemark(e.target.value)}
+                        placeholder="输入备注，记录使用者或用途"
                         className="pl-10 h-11 border-slate-200 outline-none rounded-xl focus:ring-2 focus:ring-blue-500/25 text-sm font-semibold"
                       />
                     </div>

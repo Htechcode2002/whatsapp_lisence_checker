@@ -61,7 +61,7 @@ export async function POST(request) {
     }
     
     // 首次激活：绑定硬件指纹并计算过期时间
-    if (!license.hardware_fingerprint) {
+    if (!license.activated_at) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + license.valid_days);
       
@@ -74,6 +74,19 @@ export async function POST(request) {
       );
       
       license.expires_at = expiresAt;
+      license.client_id = updatedClientIdStr;
+      license.hardware_fingerprint = hardware_fingerprint;
+    } else if (!license.hardware_fingerprint) {
+      // 解绑后重新激活：绑定新设备的硬件指纹，并保留原有的过期时间
+      const updatedClientIds = [client_id];
+      const updatedClientIdStr = updatedClientIds.join(',');
+      
+      await pool.query(
+        'UPDATE licenses SET hardware_fingerprint = ?, client_id = ? WHERE id = ?',
+        [hardware_fingerprint, updatedClientIdStr, license.id]
+      );
+      
+      license.hardware_fingerprint = hardware_fingerprint;
       license.client_id = updatedClientIdStr;
     } else if (!isAlreadyBound) {
       // 同一台设备绑定新账号

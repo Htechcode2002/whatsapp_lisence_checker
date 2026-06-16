@@ -28,6 +28,7 @@ export async function GET(request) {
         hardware_fingerprint,
         client_id,
         max_accounts,
+        remark,
         CASE 
           WHEN hardware_fingerprint IS NOT NULL THEN '已激活'
           ELSE '未激活'
@@ -52,7 +53,7 @@ export async function POST(request) {
   if (authError) return authError;
   
   try {
-    const { days = 365, max_accounts = 10, quantity = 1 } = await request.json();
+    const { days = 365, max_accounts = 10, quantity = 1, remark = null } = await request.json();
     
     const parsedDays = parseInt(days);
     const parsedMaxAccounts = parseInt(max_accounts);
@@ -68,13 +69,14 @@ export async function POST(request) {
         try {
           const licenseKey = generateLicenseKey();
           await pool.query(
-            'INSERT INTO licenses (license_key, valid_days, max_accounts) VALUES (?, ?, ?)',
-            [licenseKey, parsedDays, parsedMaxAccounts]
+            'INSERT INTO licenses (license_key, valid_days, max_accounts, remark) VALUES (?, ?, ?, ?)',
+            [licenseKey, parsedDays, parsedMaxAccounts, remark]
           );
           generatedKeys.push({
             license_key: licenseKey,
             valid_days: parsedDays,
-            max_accounts: parsedMaxAccounts
+            max_accounts: parsedMaxAccounts,
+            remark: remark
           });
           inserted = true;
         } catch (error) {
