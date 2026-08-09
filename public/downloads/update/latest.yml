@@ -1,8 +1,8 @@
-version: 0.0.8
+version: 0.0.9
 files:
-  - url: https://github.com/Htechcode2002/whatsapp_lisence_checker/releases/download/v0.0.8/ChatOwl.Setup.0.0.8.exe
-    sha512: jDC18+jLEp8YRtPfj4uqlTUbNvlZI7/bH59KgM9iip64cu9Pr63pzxqclq4yC77ViXh4U7ob7bBC2SiDJaVmLQ==
-    size: 122918013
-path: ChatOwl Setup 0.0.8.exe
-sha512: jDC18+jLEp8YRtPfj4uqlTUbNvlZI7/bH59KgM9iip64cu9Pr63pzxqclq4yC77ViXh4U7ob7bBC2SiDJaVmLQ==
-releaseDate: '2026-08-03T06:30:12.187Z'
+  - url: https://github.com/Htechcode2002/whatsapp_lisence_checker/releases/download/v0.0.9/ChatOwl.Setup.0.0.9.exe
+    sha512: p8HGwYuVtOoOzhDwnDwmGZX27IOyTY4qDbfZOSIPKMt1y5KcfJuZU0rN1Ib26f/HWr9YsgtqZqcTeIlLuRiQXQ==
+    size: 122917953
+path: ChatOwl Setup 0.0.9.exe
+sha512: p8HGwYuVtOoOzhDwnDwmGZX27IOyTY4qDbfZOSIPKMt1y5KcfJuZU0rN1Ib26f/HWr9YsgtqZqcTeIlLuRiQXQ==
+releaseDate: '2026-08-09T08:25:01.484Z'
